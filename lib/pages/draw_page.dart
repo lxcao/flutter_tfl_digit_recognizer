@@ -2,11 +2,15 @@
  * @Author: clingxin
  * @Date: 2021-05-14 09:20:36
  * @LastEditors: clingxin
- * @LastEditTime: 2021-05-14 13:35:27
+ * @LastEditTime: 2021-05-14 13:52:26
  * @FilePath: /flutter_tfl_digit_recognizer/lib/pages/draw_page.dart
  */
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_tfl_digit_recognizer/models/Prediction.dart';
 import 'package:flutter_tfl_digit_recognizer/pages/drawing_painter.dart';
+import 'package:flutter_tfl_digit_recognizer/pages/prediction_widget.dart';
 import 'package:flutter_tfl_digit_recognizer/services/recognizer.dart';
 import 'package:flutter_tfl_digit_recognizer/utils/constants.dart';
 
@@ -16,8 +20,10 @@ class DrawPage extends StatefulWidget {
 }
 
 class _DrawPageState extends State<DrawPage> {
-  final _recognizer = Recognizer();
   final _points = List<Offset>();
+  final _recognizer = Recognizer();
+  List<Prediction> _prediction;
+  bool initialize = false;
 
   @override
   void initState() {
@@ -32,14 +38,14 @@ class _DrawPageState extends State<DrawPage> {
         title: Text('Digit Recognizer'),
       ),
       body: Column(
-        children: [
+        children: <Widget>[
           Row(
-            children: [
+            children: <Widget>[
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Column(
-                    children: [
+                    children: <Widget>[
                       Text(
                         'MNIST database of handwritten digits',
                         style: TextStyle(
@@ -47,42 +53,24 @@ class _DrawPageState extends State<DrawPage> {
                         ),
                       ),
                       Text(
-                        'the digits have been size-normalized and centered in a fixed-size images (28 x 28)',
-                      ),
+                        'The digits have been size-normalized and centered in a fixed-size images (28 x 28)',
+                      )
                     ],
                   ),
                 ),
               ),
+              _mnistPreviewImage(),
             ],
           ),
-          Container(
-            width: Constants.canvasSize + Constants.borderSize * 2,
-            height: Constants.canvasSize + Constants.borderSize * 2,
-            decoration: BoxDecoration(
-                border: Border.all(
-              color: Colors.black,
-              width: Constants.borderSize,
-            )),
-            child: GestureDetector(
-              onPanUpdate: (details) {
-                Offset _localPosition = details.localPosition;
-                if (_localPosition.dx >= 0 &&
-                    _localPosition.dx <= Constants.canvasSize &&
-                    _localPosition.dy >= 0 &&
-                    _localPosition.dy <= Constants.canvasSize) {
-                  setState(() {
-                    _points.add(_localPosition);
-                  });
-                }
-              },
-              onPanEnd: (details) {
-                _points.add(null);
-                _recognize();
-              },
-              child: CustomPaint(
-                painter: DrawingPainter(_points),
-              ),
-            ),
+          SizedBox(
+            height: 10,
+          ),
+          _drawCanvasWidget(),
+          SizedBox(
+            height: 10,
+          ),
+          PredictionWidget(
+            predictions: _prediction,
           ),
         ],
       ),
@@ -91,7 +79,64 @@ class _DrawPageState extends State<DrawPage> {
         onPressed: () {
           setState(() {
             _points.clear();
+            _prediction.clear();
           });
+        },
+      ),
+    );
+  }
+
+  Widget _drawCanvasWidget() {
+    return Container(
+      width: Constants.canvasSize + Constants.borderSize * 2,
+      height: Constants.canvasSize + Constants.borderSize * 2,
+      decoration: BoxDecoration(
+        border: Border.all(
+          color: Colors.black,
+          width: Constants.borderSize,
+        ),
+      ),
+      child: GestureDetector(
+        onPanUpdate: (DragUpdateDetails details) {
+          Offset _localPosition = details.localPosition;
+          if (_localPosition.dx >= 0 &&
+              _localPosition.dx <= Constants.canvasSize &&
+              _localPosition.dy >= 0 &&
+              _localPosition.dy <= Constants.canvasSize) {
+            setState(() {
+              _points.add(_localPosition);
+            });
+          }
+        },
+        onPanEnd: (DragEndDetails details) {
+          _points.add(null);
+          _recognize();
+        },
+        child: CustomPaint(
+          painter: DrawingPainter(_points),
+        ),
+      ),
+    );
+  }
+
+  Widget _mnistPreviewImage() {
+    return Container(
+      width: 100,
+      height: 100,
+      color: Colors.black,
+      child: FutureBuilder(
+        future: _previewImage(),
+        builder: (BuildContext _, snapshot) {
+          if (snapshot.hasData) {
+            return Image.memory(
+              snapshot.data,
+              fit: BoxFit.fill,
+            );
+          } else {
+            return Center(
+              child: Text('Error'),
+            );
+          }
         },
       ),
     );
@@ -99,11 +144,16 @@ class _DrawPageState extends State<DrawPage> {
 
   void _initModel() async {
     var res = await _recognizer.loadModel();
-    print(res);
+  }
+
+  Future<Uint8List> _previewImage() async {
+    return await _recognizer.previewImage(_points);
   }
 
   void _recognize() async {
     List<dynamic> pred = await _recognizer.recognize(_points);
-    print(pred);
+    setState(() {
+      _prediction = pred.map((json) => Prediction.fromJson(json)).toList();
+    });
   }
 }
