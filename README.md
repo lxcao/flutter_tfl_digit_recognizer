@@ -2,7 +2,7 @@
  * @Author: clingxin
  * @Date: 2021-05-14 07:59:40
  * @LastEditors: clingxin
- * @LastEditTime: 2021-05-14 08:40:45
+ * @LastEditTime: 2021-05-14 14:06:06
  * @FilePath: /flutter_tfl_digit_recognizer/README.md
 -->
 # flutter_tfl_digit_recognizer
@@ -17,10 +17,14 @@ A few resource and prerequisites to run the project:
 - [tflite package setting for IOS and Android](https://pub.dev/packages/tflite)
 - [IOS Xcode Build error workaround](https://github.com/shaqian/flutter_tflite/issues/139#issuecomment-668252599)
 
-A few setup before run the project on IOS:
+A few setup before coding which make running on IOS:
 
 - rm -fr ios
 - flutter clean .
 - flutter create -i objc .
 - downgrade tensorflowliteC in /ios/Podfile.lock to 2.2.0
 - pod install
+
+A few setup after coding that make runing on IOS device:
+- add "flutterMode": "profile" into launch.json
+- run without debug in vscode what can launch APP in the real device without connecting to vscode
